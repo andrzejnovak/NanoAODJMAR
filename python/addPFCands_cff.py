@@ -2,16 +2,22 @@ import FWCore.ParameterSet.Config as cms
 from  PhysicsTools.NanoAOD.common_cff import *
 
 def addPFCands(process, runOnMC=False, onlyAK4=False, onlyAK8=False):
-    process.customizedPFCandsTask = cms.Task( )
+    process.customizedPFCandsTask = cms.Task()
     process.schedule.associate(process.customizedPFCandsTask)
 
     process.finalJetsAK8Constituents = cms.EDProducer("PatJetConstituentPtrSelector",
                                             src = cms.InputTag("finalJetsAK8"),
-                                            cut = cms.string("")
+                                            jet_radius=cms.double(0.8),
+                                            cut=cms.string("pt()>170"),
+                                            namePF=cms.string("FatJetPFCands"),
+                                            nameSV=cms.string("FatJetSV"))
                                             )
     process.finalJetsAK4Constituents = cms.EDProducer("PatJetConstituentPtrSelector",
                                             src = cms.InputTag("finalJets"),
-                                            cut = cms.string("")
+                                            jet_radius=cms.double(0.4),
+                                            cut=cms.string("pt()>20"),
+                                            namePF=cms.string("JetPFCands"),
+                                            nameSV=cms.string("JetSV"))
                                             )
     if onlyAK4:
         candList = cms.VInputTag(cms.InputTag("finalJetsAK4Constituents", "constituents"))
@@ -20,7 +26,8 @@ def addPFCands(process, runOnMC=False, onlyAK4=False, onlyAK8=False):
         candList = cms.VInputTag(cms.InputTag("finalJetsAK8Constituents", "constituents"))
         process.customizedPFCandsTask.add(process.finalJetsAK8Constituents)
     else:
-        candList = cms.VInputTag(cms.InputTag("finalJetsAK4Constituents", "constituents"), cms.InputTag("finalJetsAK8Constituents", "constituents"))
+        candList = cms.VInputTag(cms.InputTag("finalJetsAK4Constituents", "constituents"), 
+                                 cms.InputTag("finalJetsAK8Constituents", "constituents"))
         process.customizedPFCandsTask.add(process.finalJetsAK4Constituents)
         process.customizedPFCandsTask.add(process.finalJetsAK8Constituents)
     process.finalJetsConstituents = cms.EDProducer("PackedCandidatePtrMerger",
