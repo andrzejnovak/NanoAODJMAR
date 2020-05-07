@@ -7,17 +7,11 @@ def addPFCands(process, runOnMC=False, onlyAK4=False, onlyAK8=False):
 
     process.finalJetsAK8Constituents = cms.EDProducer("PatJetConstituentPtrSelector",
                                             src = cms.InputTag("finalJetsAK8"),
-                                            jet_radius=cms.double(0.8),
-                                            cut=cms.string("pt()>170"),
-                                            namePF=cms.string("FatJetPFCands"),
-                                            nameSV=cms.string("FatJetSV"))
+                                            cut=cms.string(""),
                                             )
     process.finalJetsAK4Constituents = cms.EDProducer("PatJetConstituentPtrSelector",
                                             src = cms.InputTag("finalJets"),
-                                            jet_radius=cms.double(0.4),
-                                            cut=cms.string("pt()>20"),
-                                            namePF=cms.string("JetPFCands"),
-                                            nameSV=cms.string("JetSV"))
+                                            cut=cms.string(""),
                                             )
     if onlyAK4:
         candList = cms.VInputTag(cms.InputTag("finalJetsAK4Constituents", "constituents"))
@@ -54,15 +48,19 @@ def addPFCands(process, runOnMC=False, onlyAK4=False, onlyAK8=False):
                                                          )
                                     )
     process.customAK8ConstituentsTable = cms.EDProducer("PatJetConstituentTableProducer",
-                                                        candidates = cms.InputTag("finalJetsConstituents"),
+                                                        pf_candidates = cms.InputTag("finalJetsConstituents"),
                                                         #candidates = cms.InputTag("packedPFCandidates"),
                                                         jets = cms.InputTag("finalJetsAK8"),
-                                                        name = cms.string("JetPFCandsAK8"))
+                                                        namePF = cms.string("JetPFCandsAK8"),
+                                                        nameSV=cms.string("JetSV"),
+                                                        )
     process.customAK4ConstituentsTable = cms.EDProducer("PatJetConstituentTableProducer",
                                                         #candidates = cms.InputTag("packedPFCandidates"),
-                                                        candidates = cms.InputTag("finalJetsConstituents"),
+                                                        pf_candidates = cms.InputTag("finalJetsConstituents"),
                                                         jets = cms.InputTag("finalJets"),
-                                                        name = cms.string("JetPFCandsAK4"))
+                                                        namePF = cms.string("JetPFCandsAK4"),
+                                                        nameSV=cms.string("JetSV"),
+                                                        )
 
     process.customizedPFCandsTask.add(process.finalJetsConstituents)
     process.customizedPFCandsTask.add(process.customConstituentsExtTable)

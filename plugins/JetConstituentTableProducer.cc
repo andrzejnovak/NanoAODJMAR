@@ -38,6 +38,8 @@ public:
 private:
   void produce(edm::Event &, const edm::EventSetup &) override;
 
+  typedef edm::Ptr<pat::PackedCandidate> CandidatePtr;
+  typedef edm::View<pat::PackedCandidate> CandidateView;
   typedef reco::VertexCollection VertexCollection;
   typedef reco::VertexCompositePtrCandidateCollection SVCollection;
 
@@ -49,11 +51,13 @@ private:
 
   edm::EDGetTokenT<edm::View<T>> jet_token_;
   edm::EDGetTokenT<VertexCollection> vtx_token_;
-  edm::EDGetTokenT<CandidateView> pfcand_token_;
+  edm::EDGetTokenT<reco::CandidateView> pfcand_token_;
+  //edm::EDGetTokenT<CandidateView> pfcand_token_;
   edm::EDGetTokenT<SVCollection> sv_token_;
 
   edm::Handle<VertexCollection> vtxs_;
-  edm::Handle<CandidateView> pfcands_;
+  //edm::Handle<CandidateView> pfcands_;
+  edm::Handle<reco::CandidateView> pfcands_;
   edm::Handle<SVCollection> svs_;
   edm::ESHandle<TransientTrackBuilder> track_builder_;
 
@@ -67,14 +71,16 @@ private:
 //
 template< typename T>
 JetConstituentTableProducer<T>::JetConstituentTableProducer(const edm::ParameterSet &iConfig)
-    : namePF_(iConfig.getParameter<std::string>("namePF")),
+    : readBtag_(iConfig.getParameter<bool>("readBtag")),
+      namePF_(iConfig.getParameter<std::string>("namePF")),
       nameSV_(iConfig.getParameter<std::string>("nameSV")),
-      jetCut_(iConfig.getParameter<std::string>("cut"), true),
+      jetCut_(iConfig.getParameter<std::string>("cut"), true), 
       jet_radius_(iConfig.getParameter<double>("jet_radius")),
-      readBtag_(iConfig.getParameter<bool>("readBtag")),
+      
       jet_token_(consumes<edm::View<T>>(iConfig.getParameter<edm::InputTag>("jets"))),
       vtx_token_(consumes<VertexCollection>(iConfig.getParameter<edm::InputTag>("vertices"))),
-      pfcand_token_(consumes<CandidateView>(iConfig.getParameter<edm::InputTag>("pf_candidates"))),
+      //pfcand_token_(consumes<CandidateView>(iConfig.getParameter<edm::InputTag>("pf_candidates"))),
+      pfcand_token_(consumes<reco::CandidateView>(iConfig.getParameter<edm::InputTag>("pf_candidates"))),
       sv_token_(consumes<SVCollection>(iConfig.getParameter<edm::InputTag>("secondary_vertices"))){
   produces<nanoaod::FlatTable>(namePF_);
   produces<nanoaod::FlatTable>(nameSV_);
@@ -89,8 +95,12 @@ void JetConstituentTableProducer<T>::produce(edm::Event &iEvent, const edm::Even
   // elements in all these collections must have the same order!
   auto outCands = std::make_unique<std::vector<reco::CandidatePtr>>();
   auto outSVs = std::make_unique<std::vector<const reco::VertexCompositePtrCandidate *>> ();
-  std::vector<int> jetIdx_pf, jetIdx_sv, candIdx;
+  std::vector<int> jetIdx_pf, jetIdx_sv, candIdx, svIdx;
+   // PF Cands
   std::vector<float> btagEtaRel, btagPtRatio, btagPParRatio, btagSip3dVal, btagSip3dSig, btagJetDistVal;
+  // Secondary vertices
+  std::vector<float> sv_mass, sv_pt, sv_ntracks, sv_chi2, sv_normchi2, sv_dxy, sv_dxysig, sv_d3d, sv_d3dsig, sv_costhetasvpv;
+  std::vector<float> sv_ptrel, sv_phirel, sv_deltaR, sv_enratio;
   
   auto jets = iEvent.getHandle(jet_token_);
 
@@ -98,7 +108,7 @@ void JetConstituentTableProducer<T>::produce(edm::Event &iEvent, const edm::Even
   iEvent.getByToken(pfcand_token_, pfcands_);
   iEvent.getByToken(sv_token_, svs_);
   iSetup.get<TransientTrackRecord>().get("TransientTrackBuilder", track_builder_);
-  }
+  
 
   for (unsigned i_jet = 0; i_jet < jets->size(); ++i_jet) {
     const auto &jet = jets->at(i_jet);
@@ -147,14 +157,14 @@ void JetConstituentTableProducer<T>::produce(edm::Event &iEvent, const edm::Even
     std::vector<reco::CandidatePtr> const & daughters = jet.daughterPtrVector();
 
     for (const auto &cand : daughters) {
-      auto candPtrs = cands_->ptrs();
+      auto candPtrs = pfcands_->ptrs();
       auto candInNewList = std::find( candPtrs.begin(), candPtrs.end(), cand );
       if ( candInNewList == candPtrs.end() ) {
 	std::cout << "Cannot find candidate : " << cand.id() << ", " << cand.key() << ", pt = " << cand->pt() << std::endl;
 	continue;
       }
       outCands->push_back(cand);
-      jetIdx.push_back(i_jet);
+      jetIdx_pf.push_back(i_jet);
       candIdx.push_back( candInNewList - candPtrs.begin() );
       if (readBtag_ && !vtxs_->empty()) {
 	if ( cand.isNull() ) continue;
@@ -185,10 +195,13 @@ void JetConstituentTableProducer<T>::produce(edm::Event &iEvent, const edm::Even
   auto candTable = std::make_unique<nanoaod::FlatTable>(outCands->size(), namePF_, false);
   auto svTable = std::make_unique<nanoaod::FlatTable>(outSVs->size(), nameSV_, false);
   // PF Cand table
-  candTable->addColumn<int>("jetIdx", jetIdx, "Index of the parent jet", nanoaod::FlatTable::IntColumn);
+  candTable->addColumn<int>("jetIdx", jetIdx_pf, "Index of the parent jet", nanoaod::FlatTable::IntColumn);
   candTable->addColumn<int>("candIdx", candIdx, "Index in the candidate list", nanoaod::FlatTable::IntColumn);
+
+  svTable->addColumn<int>("jetIdx", jetIdx_sv, "Index of the parent jet", nanoaod::FlatTable::IntColumn);
   candTable->addColumn<int>("svIdx", svIdx, "Index in the candidate list", nanoaod::FlatTable::IntColumn);
   if (readBtag_) {
+    // PF table
     candTable->addColumn<float>("btagEtaRel", btagEtaRel, "btagEtaRel", nanoaod::FlatTable::FloatColumn, 10);
     candTable->addColumn<float>("btagPtRatio", btagPtRatio, "btagPtRatio", nanoaod::FlatTable::FloatColumn, 10);
     candTable->addColumn<float>("btagPParRatio", btagPParRatio, "btagPParRatio", nanoaod::FlatTable::FloatColumn, 10);
@@ -197,7 +210,6 @@ void JetConstituentTableProducer<T>::produce(edm::Event &iEvent, const edm::Even
     candTable->addColumn<float>("btagJetDistVal", btagJetDistVal, "btagJetDistVal", nanoaod::FlatTable::FloatColumn, 10);
 
     // SV table
-    svTable->addColumn<int>("jetIdx", jetIdx_sv, "Index of the parent jet", nanoaod::FlatTable::IntColumn);
     svTable->addColumn<float>("mass", sv_mass, "SV mass", nanoaod::FlatTable::FloatColumn, 10);
     svTable->addColumn<float>("pt", sv_pt, "SV pt", nanoaod::FlatTable::FloatColumn, 10);
     svTable->addColumn<float>("ntracks", sv_ntracks, "Number of trakcs associated to SV", nanoaod::FlatTable::FloatColumn, 10);
