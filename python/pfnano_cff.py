@@ -6,7 +6,7 @@ from PhysicsTools.NanoAOD.common_cff import Var
 
 def PFnano_customizeMC(process):
     addPFCands(process, True)
-    add_BTV(process, True)
+    add_BTV(process, True)    
     process.NANOAODSIMoutput.fakeNameForCrab = cms.untracked.bool(True)  # needed for crab publication
     return process
 

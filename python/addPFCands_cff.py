@@ -55,21 +55,22 @@ def addPFCands(process, runOnMC=False, allPF = False, onlyAK4=False, onlyAK8=Fal
     process.customAK8ConstituentsTable = cms.EDProducer("PatJetConstituentTableProducer",
                                                         candidates = candInput,
                                                         jets = cms.InputTag("finalJetsAK8"),
-                                                        jet_radius = cms.double(0.8),
+                                                        dRtoSV = cms.double(0.7),
                                                         name = cms.string("FatJetPFCands"),
                                                         idx_name = cms.string("pFCandsIdx"),
                                                         nameSV = cms.string("FatJetSVs"),
                                                         idx_nameSV = cms.string("sVIdx"),
+                                                        #svTagInfos = cms.InputTag("pfInclusiveSecondaryVertexFinderAK8TagInfos"),
                                                         )
     process.customAK4ConstituentsTable = cms.EDProducer("PatJetConstituentTableProducer",
-                                                        #candidates = cms.InputTag("packedPFCandidates"),
                                                         candidates = candInput,
                                                         jets = cms.InputTag("finalJets"),
-                                                        jet_radius = cms.double(0.4),
+                                                        dRtoSV = cms.double(0.3),
                                                         name = cms.string("JetPFCands"),
                                                         idx_name = cms.string("pFCandsIdx"),
                                                         nameSV = cms.string("JetSVs"),
                                                         idx_nameSV = cms.string("sVIdx"),
+                                                        #svTagInfos = cms.InputTag("pfInclusiveSecondaryVertexFinderTagInfos"),
                                                         )
     if not allPF:
         process.customizedPFCandsTask.add(process.finalJetsConstituents)

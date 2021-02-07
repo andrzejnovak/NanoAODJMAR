@@ -24,6 +24,7 @@ def update_jets_AK4(process):
                             ['L1FastJet', 'L2Relative', 'L3Absolute',
                              'L2L3Residual']), 'None'),
         btagDiscriminators=_btagDiscriminators,
+        btagInfos=['pfDeepCSVTagInfos', 'pfInclusiveSecondaryVertexFinderTagInfos'],
         postfix='WithDeepInfo',
     )
     process.load("Configuration.StandardSequences.MagneticField_cff")
@@ -31,6 +32,8 @@ def update_jets_AK4(process):
     process.updatedJets.jetSource = "selectedUpdatedPatJetsWithDeepInfo"
 
     process.updatedPatJetsTransientCorrectedWithDeepInfo.tagInfoSources.append(cms.InputTag("pfDeepCSVTagInfosWithDeepInfo"))
+    process.updatedPatJetsTransientCorrectedWithDeepInfo.tagInfoSources.append(cms.InputTag("pfInclusiveSecondaryVertexFinderTagInfosWithDeepInfo"))
+
     process.updatedPatJetsTransientCorrectedWithDeepInfo.addTagInfos = cms.bool(True)
     
     return process
@@ -266,6 +269,7 @@ def add_BTV(process, runOnMC=False, onlyAK4=False, onlyAK8=False, keepInputs=Tru
         variables=cms.PSet(
             CommonVars,
             get_DeepCSV_vars() if keepInputs else cms.PSet(),
+            nSV = Var("tagInfo(\'pfInclusiveSecondaryVertexFinder\').nVertices()", int,doc="Number of vertices from 'pfInclusiveSecondaryVertexFinderTagInfos'"),
         ))
 
     # AK8
@@ -283,6 +287,7 @@ def add_BTV(process, runOnMC=False, onlyAK4=False, onlyAK8=False, keepInputs=Tru
                 btagDDBvLV2 = Var("bDiscriminator('pfMassIndependentDeepDoubleBvLV2JetTags:probHbb')",float,doc="DeepDoubleX V2 discriminator for H(Z)->bb vs QCD",precision=10),
                 btagDDCvLV2 = Var("bDiscriminator('pfMassIndependentDeepDoubleCvLV2JetTags:probHcc')",float,doc="DeepDoubleX V2 discriminator for H(Z)->cc vs QCD",precision=10),
                 btagDDCvBV2 = Var("bDiscriminator('pfMassIndependentDeepDoubleCvBV2JetTags:probHcc')",float,doc="DeepDoubleX V2 discriminator for H(Z)->cc vs H(Z)->bb",precision=10),
+                nSV = Var("tagInfo(\'pfInclusiveSecondaryVertexFinderAK8\').nVertices()", int,doc="Number of vertices from 'pfInclusiveSecondaryVertexFinderAK8TagInfos'"),
             ),
             get_DDX_vars() if keepInputs else cms.PSet(),
         ))
